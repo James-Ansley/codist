@@ -1,14 +1,10 @@
 # CoDist
 
 CoDist (Code Distance) is a library that provides functions to calculate the
-edit distance of abstract syntax trees.
+edit distance and edit paths of abstract syntax trees.
 
 While this library is primarily concerned with AST edit distances, it can handle
-any generic tree of the form: `Tree[T] = tuple[T, tuple[Tree[T], ...]]` or
-forest of the form: `Forest[T] = tuple[Tree[T], ...]`.
-
-To compare the distances of trees use `codist.tree_dist` and for forests,
-use `codist.forest_dist`.
+any generic tree of the form: `Tree[T] = tuple[T, tuple[Tree[T], ...]]`
 
 ## Install
 
@@ -20,13 +16,10 @@ pip install codist
 
 Currently, only AST node _type_ information is compared. A silhouette of an AST
 (an AST containing only type information) is constructed with
-the `parse_ast_silhouette` function. The distance between two ASTs can be
-calculated with the `tree_dist` function.
+the `parse_ast_silhouette` function.
 
 ```python
 from pprint import pprint
-
-from codist import tree_dist
 from codist.ast import parse_ast_silhouette
 
 code1 = """
@@ -50,16 +43,13 @@ def process(data):
 ast1 = parse_ast_silhouette(code1)
 ast2 = parse_ast_silhouette(code2)
 
-dist = tree_dist(ast1, ast2)
-
 pprint(ast1)
 pprint(ast2)
-print("The above trees have a distance of:", dist)
 ```
 
-Would print:
+Which prints:
 
-```text
+```
 ('Module',
  (('FunctionDef',
    (('arguments', (('arg', ()),)),
@@ -88,7 +78,49 @@ Would print:
           ('Add', ()),
           ('List', (('Name', (('Load', ()),)), ('Load', ()))))))))),
     ('Return', (('Name', (('Load', ()),)),)))),))
+```
+
+The distance between two ASTs can be computed with the `tree_dist` function.
+
+```python
+from codist import tree_dist
+
+print("The above trees have a distance of:", tree_dist(ast1, ast2))
+```
+
+Would print:
+
+```text
 The above trees have a distance of: 8
+```
+
+The edit path and distance between two trees can be computed with
+the `tree_edit` function. For convenience, this function also computes the
+edit distance:
+
+```python
+from codist import tree_edit
+
+dist, path = tree_edit(ast1, ast2)
+print("The above trees have a distance of:", dist)
+print("And an edit path of:")
+pprint(tuple(e for e in path if e[0] != e[1]))
+```
+
+which prints:
+
+
+```
+The above trees have a distance of: 8
+And an edit path of:
+(('Gt', 'GtE'),
+ ('Load', 'Store'),
+ ('Load', 'Add'),
+ ('Attribute', 'Λ'),
+ ('Λ', 'Load'),
+ ('Λ', 'List'),
+ ('Call', 'AugAssign'),
+ ('Expr', 'Λ'))
 ```
 
 A custom set of `Cost` functions can be provided to change the weights of

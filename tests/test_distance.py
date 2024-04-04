@@ -1,64 +1,48 @@
-from codist.distance import Cost, forest_dist, tree, tree_dist
+from codist import t
+from codist.distance import Cost, tree_dist
 
-
-def test_two_empty_trees_have_an_edit_distance_of_zero():
-    assert tree_dist((), ()) == 0
-
-
-def test_two_empty_forests_have_an_edit_distance_of_zero():
-    assert forest_dist((), ()) == 0
+tree1 = t("f", t("d", t("a"), t("c", t("b"))), t("e"))
+tree2 = t("f", t("c", t("d", t("a"), t("b"))), t("e"))
+tree3 = t(
+    "g",
+    t("e", t("a"), t("c", t("b")), t("d")),
+    t("f"),
+)
+tree4 = t(
+    "o",
+    t("g", t("a"), t("c", t("b")), t("f", t("d"), t("e"))),
+    t("n", t("i", t("h")), t("j"), t("k"), t("m", t("l"))),
+)
 
 
 def test_two_identical_trees_have_an_edit_distance_of_zero():
-    assert tree_dist(tree("a"), tree("a")) == 0
-    assert tree_dist(tree("a", (tree("b"),)), tree("a", (tree("b"),))) == 0
+    assert tree_dist(t("a"), t("a")) == 0
+    assert tree_dist(t("a", t("b")), t("a", t("b"))) == 0
     assert tree_dist(
-        tree("a", (tree("b"), tree("c"))),
-        tree("a", (tree("b"), tree("c"))),
+        t("a", t("b"), t("c")),
+        t("a", t("b"), t("c")),
     ) == 0
 
 
-def test_two_identical_forests_have_an_edit_distance_of_zero():
-    f1 = (tree("a"),)
-    f2 = (tree("a"), tree("b"))
-    f3 = (tree("a", (tree("b"),)), tree("c"))
-    assert forest_dist(f1, f1) == 0
-    assert forest_dist(f2, f2) == 0
-    assert forest_dist(f3, f3) == 0
-
-
-def test_inserting_a_single_node_will_cost_one_insertion():
-    assert tree_dist((), tree("a")) == 1
-    assert tree_dist((), tree("a"), Cost(insert=lambda n: 10)) == 10
-    assert tree_dist((), tree("a"), Cost(delete=lambda n: 10)) == 1
-
-
-def test_deleting_a_single_node_will_cost_one_deletion():
-    assert tree_dist(tree("a"), ()) == 1
-    assert tree_dist(tree("a"), (), Cost(delete=lambda n: 10)) == 10
-    assert tree_dist(tree("a"), (), Cost(insert=lambda n: 10)) == 1
-
-
 def test_relabeling_a_single_node_will_cost_one_relabel():
-    assert tree_dist(tree("a"), tree("b")) == 1
+    assert tree_dist(t("a"), t("b")) == 1
     cost = Cost(
         relabel=lambda n1, n2: 10,
         insert=lambda n: 100,
         delete=lambda n: 100,
     )
-    assert tree_dist(tree("a"), tree("b"), cost) == 10
-    assert tree_dist(tree("a"), tree("b"), Cost(insert=lambda n: 10)) == 1
+    assert tree_dist(t("a"), t("b"), cost) == 10
+    assert tree_dist(t("a"), t("b"), Cost(insert=lambda n: 10)) == 1
 
 
 def test_tree_edit_distance_will_find_the_minimum_edit_distance():
-    tree1 = tree(
+    tree1 = t(
         "d",
-        (
-            tree("b", (tree("a"), tree("c"))),
-            tree("f", (tree("e"), tree("g"))),
-        ),
+        t("b", t("a"), t("c")),
+        t("f", t("e"), t("g")),
+
     )
-    tree2 = tree("f", (tree("e", (tree("x"),)), tree("g")))
+    tree2 = t("f", t("e", t("x")), t("g"))
     cost = Cost(
         delete=(lambda _: 3),
         insert=(lambda _: 3),
@@ -75,3 +59,31 @@ def test_tree_edit_distance_will_find_the_minimum_edit_distance():
     # Delete c, e, g; Relabel f -> g, d -> f, b -> e, a -> x
     assert tree_dist(tree1, tree2, cost) == 17
     assert tree_dist(tree2, tree1, cost) == 17
+
+
+def test_tree_dist():
+    assert tree_dist(tree1, tree1) == 0
+    assert tree_dist(tree1, tree2) == 2
+    assert tree_dist(tree1, tree3) == 4
+    assert tree_dist(tree1, tree4) == 12
+    assert tree_dist(tree2, tree2) == 0
+    assert tree_dist(tree2, tree3) == 6
+    assert tree_dist(tree2, tree4) == 14
+    assert tree_dist(tree3, tree3) == 0
+    assert tree_dist(tree3, tree4) == 11
+    assert tree_dist(tree4, tree4) == 0
+
+    assert tree_dist(tree2, tree1) == 2
+    assert tree_dist(tree3, tree1) == 4
+    assert tree_dist(tree4, tree1) == 12
+    assert tree_dist(tree3, tree2) == 6
+    assert tree_dist(tree4, tree2) == 14
+    assert tree_dist(tree4, tree3) == 11
+
+    cost = Cost(
+        delete=(lambda _: 10),
+        insert=(lambda _: 10),
+        relabel=(lambda n1, n2: 0 if n1 == n2 else 10),
+    )
+    assert tree_dist(tree1, tree2, cost) == 20
+    assert tree_dist(tree2, tree1, cost) == 20

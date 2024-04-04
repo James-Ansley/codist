@@ -7,3 +7,4 @@ API
    codist
    codist.distance
    codist.ast
+   codist.tree

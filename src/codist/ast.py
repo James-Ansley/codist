@@ -1,6 +1,7 @@
 import ast
 
-from .distance import Tree, tree
+from .distance import Tree
+from .tree import t
 
 __all__ = ("parse_ast_silhouette", "ast_silhouette")
 
@@ -15,7 +16,7 @@ def parse_ast_silhouette(code: str) -> Tree[str]:
 
 def ast_silhouette(node: ast.AST) -> Tree[str]:
     """Returns a Tree containing only AST node type information"""
-    return tree(
+    return t(
         type(node).__name__,
-        tuple(ast_silhouette(n) for n in ast.iter_child_nodes(node))
+        *(ast_silhouette(n) for n in ast.iter_child_nodes(node))
     )

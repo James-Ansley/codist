@@ -13,9 +13,8 @@
 
    .. autosummary::
    
-      tree
       tree_dist
-      forest_dist
+      tree_edit
    
    
 

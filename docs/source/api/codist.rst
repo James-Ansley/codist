@@ -13,9 +13,12 @@
 
    .. autosummary::
    
-      forest_dist
-      tree
+      keyroots
+      leftmosts
+      postorder
+      t
       tree_dist
+      tree_edit
    
    
 
