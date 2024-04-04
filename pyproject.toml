@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "codist"
-version = "0.0.1"
+version = "0.1.0"
 description = "AST edit distance"
 
 readme = "README.md"
