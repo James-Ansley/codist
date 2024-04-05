@@ -1,9 +1,19 @@
+"""
+Tree utilities and type definitions.
+"""
+
 from collections.abc import Hashable
 
-__all__ = ("Tree", "Forest", "t", "postorder", "keyroots", "leftmosts")
+__all__ = ("Tree", "t", "postorder", "keyroots", "leftmosts")
+
+from typing import TypeVar
+
+T = TypeVar("T", bound=Hashable)
+#: A tree type.
+#: A tree is any tuple of the form: ``Tree[T] = tuple[T, tuple[Tree[T], ...]]``
+Tree: type["tuple[T, tuple[Tree[T], ...]]"]
 
 type Tree[T: Hashable] = tuple[T, tuple[Tree[T], ...]]
-type Forest[T: Hashable] = tuple[Tree[T], ...]
 
 
 def t[T](
@@ -26,7 +36,7 @@ def postorder[T](tree: Tree[T]) -> tuple[T, ...]:
 
 
 def keyroots[T](tree: Tree[T]) -> tuple[int, ...]:
-    """keyroot indices for keyroots in ``tree``"""
+    """Postorder traversal of keyroot indices for keyroots in :math:`T`"""
     s1 = [(True, tree)]
     s2 = []
     while s1:
@@ -50,6 +60,7 @@ def leftmosts[T](tree: Tree[T]) -> tuple[int, ...]:
         current = s1.pop()
         s2.append(current)
         s1.extend(current[1])
+    # memo depends on node identity in postorder traversal, not node value.
     memo = {}
     indices = []
     for i, node in enumerate(reversed(s2)):

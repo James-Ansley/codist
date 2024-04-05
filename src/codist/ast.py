@@ -1,7 +1,11 @@
+"""
+Utilities for converting abstract syntax trees to :data:`codist.tree.Tree`
+objects
+"""
+
 import ast
 
-from .distance import Tree
-from .tree import t
+from .tree import t, Tree
 
 __all__ = ("parse_ast_silhouette", "ast_silhouette")
 

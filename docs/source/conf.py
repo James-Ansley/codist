@@ -2,6 +2,9 @@
 #
 # For the full list of built-in configuration values, see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
+import codist
+
+import importlib.metadata
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
@@ -9,7 +12,7 @@
 project = 'CoDist'
 copyright = '2024, James Finnie-Ansley'
 author = 'James Finnie-Ansley'
-release = '0.0.1'
+release = importlib.metadata.version(codist.__package__ or codist.__name__)
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -34,9 +37,9 @@ html_static_path = ['_static']
 add_module_names = False
 
 autodoc_default_options = {
-    'members': True,
-    'member-order': "bysource",
+    "members": True,
+    "undoc-members": True,
+    "imported-members": True,
+
 }
-python_use_unqualified_type_names = True
-autosummary_ignore_module_all = False
-autosummary_imported_members = True
+autodoc_typehints_format = "short"

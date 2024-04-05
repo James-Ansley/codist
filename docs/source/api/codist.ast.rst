@@ -1,4 +1,4 @@
-﻿codist.ast
+codist.ast
 ==========
 
 .. automodule:: codist.ast
@@ -13,8 +13,8 @@
 
    .. autosummary::
    
-      parse_ast_silhouette
       ast_silhouette
+      parse_ast_silhouette
    
    
 

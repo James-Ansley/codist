@@ -1,6 +1,9 @@
+"""
+Functions to compute the edit distance between trees with given cost functions.
+"""
+
 from collections.abc import Callable
-from dataclasses import dataclass
-from typing import Final
+from typing import Final, TypeVar
 
 from . import tree
 from .tree import Tree
@@ -13,22 +16,47 @@ __all__ = (
     "Change",
 )
 
+#: A singleton used in change operations
 Lambda: Final[str] = "Λ"
+
+T = TypeVar("T")
+#: A change operation of the form ``(T | Lambda -> T | Lambda)``
+Change: type[tuple[T | Lambda, T | Lambda]]
+
 type Change[T] = tuple[T | Lambda, T | Lambda]
 
 
-@dataclass(frozen=True)
 class Cost[T]:
     """
     A set of tree edit cost functions for deleting, inserting
     and relabelling nodes.
 
     By default, returns 1 except for the case γ(a -> a) which returns 0
+
+    :param delete: A cost function, ``(T) -> float``
+        for the change operation ``(T -> Λ)``. Default is ``(T) -> 1``
+    :param insert: A cost function ``(T) -> float``
+        for the change operation ``(Λ -> T)``. Default is ``(T) -> 1``
+    :param relabel: A cost function ``(T1, T2) -> float``
+        for the change operation ``(T1 -> T2)``.
+        Default is ``(T1, T2) -> 0 if T1 == T2 else 1``
+
+    :ivar delete: A cost function, ``(T) -> float``
+    :ivar insert: A cost function ``(T) -> float``
+    :ivar relabel: A cost function ``(T1, T2) -> float``
     """
 
-    delete: Callable[[T], float] = (lambda n: 1)
-    insert: Callable[[T], float] = (lambda n: 1)
-    relabel: Callable[[T, T], float] = (lambda n1, n2: 0 if n1 == n2 else 1)
+    def __init__(
+          self,
+          delete: Callable[[T], float] = (lambda n: 1),
+          insert: Callable[[T], float] = (lambda n: 1),
+          relabel: Callable[[T, T], float] = (
+                lambda n1, n2: 0 if n1 == n2 else 1
+          ),
+    ):
+        self.delete: Final[Callable[[T], float]] = delete
+        self.insert: Final[Callable[[T], float]] = insert
+        self.relabel: Final[Callable[[T, T], float]] = relabel
 
 
 def tree_dist[T](
@@ -38,6 +66,12 @@ def tree_dist[T](
 ) -> float:
     """
     Tree edit cost using the given cost function.
+
+    :param tree1: the initial tree
+    :param tree2: the target tree
+    :param cost: a Cost object defining cost functions
+
+    :returns: The edit distance between ``tree1`` and ``tree2``
     """
     postorder1 = tree.postorder(tree1)
     postorder2 = tree.postorder(tree2)
@@ -94,6 +128,15 @@ def tree_edit[T](
 ) -> tuple[float, tuple[Change[T], ...]]:
     """
     Tree edit cost and edit path using the given cost function.
+
+    :param tree1: the initial tree
+    :param tree2: the target tree
+    :param cost: a Cost object defining cost functions
+
+    :returns: A tuple containing the edit distance between
+        ``tree1`` and ``tree2`` and a tuple of `Change` operations where each
+        change operation is a 2-tuple of the form ``(T | Lambda -> T | Lambda)``
+        where ``Lambda`` is a singleton string: ``"Λ"``
     """
     postorder1 = tree.postorder(tree1)
     postorder2 = tree.postorder(tree2)

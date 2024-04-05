@@ -1,5 +1,5 @@
 from codist import t
-from codist.distance import Cost, tree_dist
+from codist.distance import Cost, Lambda, tree_dist, tree_edit
 
 tree1 = t("f", t("d", t("a"), t("c", t("b"))), t("e"))
 tree2 = t("f", t("c", t("d", t("a"), t("b"))), t("e"))
@@ -13,6 +13,13 @@ tree4 = t(
     t("g", t("a"), t("c", t("b")), t("f", t("d"), t("e"))),
     t("n", t("i", t("h")), t("j"), t("k"), t("m", t("l"))),
 )
+tree5 = t(
+        "d",
+        t("b", t("a"), t("c")),
+        t("f", t("e"), t("g")),
+
+    )
+tree6 = t("f", t("e", t("x")), t("g"))
 
 
 def test_two_identical_trees_have_an_edit_distance_of_zero():
@@ -36,29 +43,22 @@ def test_relabeling_a_single_node_will_cost_one_relabel():
 
 
 def test_tree_edit_distance_will_find_the_minimum_edit_distance():
-    tree1 = t(
-        "d",
-        t("b", t("a"), t("c")),
-        t("f", t("e"), t("g")),
-
-    )
-    tree2 = t("f", t("e", t("x")), t("g"))
     cost = Cost(
         delete=(lambda _: 3),
         insert=(lambda _: 3),
         relabel=(lambda n1, n2: 0 if n1 == n2 else 2),
     )
     # Delete d, b, a, c; Insert x
-    assert tree_dist(tree1, tree2, cost) == 15
-    assert tree_dist(tree2, tree1, cost) == 15
+    assert tree_dist(tree5, tree6, cost) == 15
+    assert tree_dist(tree6, tree5, cost) == 15
     cost = Cost(
         delete=(lambda _: 3),
         insert=(lambda _: 3),
         relabel=(lambda n1, n2: 2),
     )
     # Delete c, e, g; Relabel f -> g, d -> f, b -> e, a -> x
-    assert tree_dist(tree1, tree2, cost) == 17
-    assert tree_dist(tree2, tree1, cost) == 17
+    assert tree_dist(tree5, tree6, cost) == 17
+    assert tree_dist(tree6, tree5, cost) == 17
 
 
 def test_tree_dist():
@@ -87,3 +87,30 @@ def test_tree_dist():
     )
     assert tree_dist(tree1, tree2, cost) == 20
     assert tree_dist(tree2, tree1, cost) == 20
+
+
+def test_tree_edit_path_will_return_operations_to_transform_one_tree_into_another():
+    cost = Cost(
+        delete=(lambda _: 3),
+        insert=(lambda _: 3),
+        relabel=(lambda n1, n2: 0 if n1 == n2 else 2),
+    )
+    # Delete d, b, a, c; Insert x
+    cost, path = tree_edit(tree5, tree6, cost)
+    assert cost == 15
+    assert set(path) == {
+        ("d", Lambda), ("b", Lambda), ("a", Lambda), ("c", Lambda),
+        (Lambda, "x"), ('e', 'e'), ('f', 'f'), ('g', 'g'),
+    }
+    cost = Cost(
+        delete=(lambda _: 3),
+        insert=(lambda _: 3),
+        relabel=(lambda n1, n2: 2),
+    )
+    # Delete c, e, g; Relabel f -> g, d -> f, b -> e, a -> x
+    cost, path = tree_edit(tree5, tree6, cost)
+    assert cost == 17
+    assert set(path) == {
+        ("c", Lambda), ("f", Lambda), ("g", Lambda),
+        ("e", "g"), ("d", "f"), ("b", "e"), ("a", "x")
+    }

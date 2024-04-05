@@ -4,7 +4,7 @@ API
 .. autosummary::
    :toctree: api
 
-   codist
-   codist.distance
-   codist.ast
-   codist.tree
+    codist
+    codist.ast
+    codist.distance
+    codist.tree

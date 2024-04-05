@@ -5,6 +5,12 @@
 
    
    
+   .. rubric:: Module Attributes
+
+   .. autosummary::
+   
+      Tree
+   
    
 
    
@@ -13,10 +19,10 @@
 
    .. autosummary::
    
-      t
-      postorder
       keyroots
       leftmosts
+      postorder
+      t
    
    
 
