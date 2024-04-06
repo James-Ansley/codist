@@ -14,6 +14,80 @@ pip install codist
 
 ## Usage
 
+### Tree Edit Distance
+
+Trees are represented as tuples: `Tree[T] = tuple[T, tuple[Tree[T], ...]]`.
+
+For example, the following two trees from the original Zhang Shasha paper:
+
+<div style="display: flex; gap: 0.5ch; justify-content: center;">
+<img src="assets/graph_1.png" style="max-width: 47%; height: 14em;"/>
+<img src="assets/graph_2.png" style="max-width: 47%; height: 14em;"/>
+</div>
+
+Can be represented with the following tuples:
+
+```python
+tree1 = ("f", (("d", (("a", ()), ("c", (("b", ()),)))), ("e", ())))
+tree2 = ("f", (("c", (("d", (("a", ()), ("b", ())),),),), ("e", ())))
+```
+
+A small helper function, `t`, has been provided to make tree construction less
+verbose:
+
+```python
+from codist import t
+
+tree1 = t("f", t("d", t("a"), t("c", t("b"))), t("e"))
+tree2 = t("f", t("c", t("d", t("a"), t("b"))), t("e"))
+```
+
+The distance between these two trees can be taken with the `tree_dist` function:
+
+```python
+from codist import tree_dist
+
+dist = tree_dist(tree1, tree2)
+print("The distance is:", dist)  # The distance is 2
+```
+
+A custom set of cost functions can be provided with a `Cost` object:
+
+```python
+from codist import Cost, tree_dist
+
+cost = Cost(
+    delete=lambda n: 3,
+    insert=lambda n: 3,
+    relabel=lambda n1, n2: 0 if n1 == n2 else 2,
+)
+
+dist = tree_dist(tree1, tree2, cost=cost)
+print("The distance is:", dist)  # The distance is 6
+```
+
+By default, all change operations have a cost of 1 except for the case of
+γ(a -> a) which is 0.
+
+The edit path can be obtained with the `tree_edit` function which returns the
+tree distance and a tuple of change operations:
+
+```python
+from codist import tree_edit
+
+dist, path = tree_edit(tree1, tree2)
+path = tuple(c for c in path if c[0] != c[1])
+print("The distance is:", dist)  # The distance is 2
+print("The changes are:", path)  # The changes are: (('c', 'Λ'), ('Λ', 'c'))
+```
+
+Change operations are 2-tuples of the form: `tuple[T | Lambda, T | Lambda]`
+where `Lambda` is a singleton defined in the `distance` module.
+
+The `tree_edit` function can also take a cost object.
+
+### AST Edit Distance
+
 Currently, only AST node _type_ information is compared. A silhouette of an AST
 (an AST containing only type information) is constructed with
 the `parse_ast_silhouette` function.
@@ -80,70 +154,4 @@ Which prints:
     ('Return', (('Name', (('Load', ()),)),)))),))
 ```
 
-The distance between two ASTs can be computed with the `tree_dist` function.
-
-```python
-from codist import tree_dist
-
-print("The above trees have a distance of:", tree_dist(ast1, ast2))
-```
-
-Would print:
-
-```text
-The above trees have a distance of: 8
-```
-
-The edit path and distance between two trees can be computed with
-the `tree_edit` function. For convenience, this function also computes the
-edit distance:
-
-```python
-from codist import tree_edit
-
-dist, path = tree_edit(ast1, ast2)
-print("The above trees have a distance of:", dist)
-print("And an edit path of:")
-pprint(tuple(e for e in path if e[0] != e[1]))
-```
-
-which prints:
-
-
-```
-The above trees have a distance of: 8
-And an edit path of:
-(('Gt', 'GtE'),
- ('Load', 'Store'),
- ('Load', 'Add'),
- ('Attribute', 'Λ'),
- ('Λ', 'Load'),
- ('Λ', 'List'),
- ('Call', 'AugAssign'),
- ('Expr', 'Λ'))
-```
-
-A custom set of `Cost` functions can be provided to change the weights of
-insertions, deletions, and relabelings. By default, all change operations are 1
-except for the case of γ(a -> a) which is 0. To change the cost, construct
-a `Cost` object:
-
-```python
-from codist import Cost
-
-cost = Cost(
-    delete=(lambda n: 3),
-    insert=(lambda n: 3),
-    relabel=(lambda n1, n2: 0 if n1 == n2 else 2),
-)
-
-dist = tree_dist(ast1, ast2, cost=cost)
-
-print("The above trees have a distance of:", dist)
-```
-
-Which prints:
-
-```
-The above trees have a distance of: 20
-```
+The distance between these ASTs can be taken as above.
