@@ -75,8 +75,6 @@ def tree_dist[T](
     """
     postorder1 = tree.postorder(tree1)
     postorder2 = tree.postorder(tree2)
-    keyroots1 = tree.keyroots(tree1)
-    keyroots2 = tree.keyroots(tree2)
     l1 = tree.leftmosts(tree1)
     l2 = tree.leftmosts(tree2)
 
@@ -117,8 +115,8 @@ def tree_dist[T](
                         forest_dist[m][n] + memo[ni][nj]
                     )
 
-    for ki in keyroots1:
-        for kj in keyroots2:
+    for ki in tree.keyroots(tree1):
+        for kj in tree.keyroots(tree2):
             _tree_dist(ki, kj)
 
     return memo[-1][-1]
@@ -143,8 +141,6 @@ def tree_edit[T](
     """
     postorder1 = tree.postorder(tree1)
     postorder2 = tree.postorder(tree2)
-    keyroots1 = tree.keyroots(tree1)
-    keyroots2 = tree.keyroots(tree2)
     l1 = tree.leftmosts(tree1)
     l2 = tree.leftmosts(tree2)
 
@@ -153,9 +149,6 @@ def tree_edit[T](
     relabel = cost.relabel
 
     memo = [[0 for _ in postorder2] for _ in postorder1]
-    # TODO — maybe change opts and opt_parts to store tuples of the form
-    #  ((i, j), Change) where (i, j) refers to the previous operation index
-    #  this might significantly reduce overhead
     ops = [[[] for _ in postorder2] for _ in postorder1]
 
     def _tree_dist(i, j):
@@ -163,21 +156,21 @@ def tree_edit[T](
             [0 for _ in range(j - l2[j] + 2)]
             for _ in range(i - l1[i] + 2)
         ]
-        opt_parts = [[[] for _ in range(j - l2[j] + 2)]
+        opt_parts = [[() for _ in range(j - l2[j] + 2)]
                      for _ in range(i - l1[i] + 2)]
 
-        for (i1, ni) in enumerate(range(l1[i], i + 1), start=1):
+        for i1, ni in enumerate(range(l1[i], i + 1), start=1):
             node = postorder1[ni]
             forest_dist[i1][0] = forest_dist[i1 - 1][0] + delete(node)
-            opt_parts[i1][0] = [*opt_parts[i1 - 1][0], (node, Lambda)]
+            opt_parts[i1][0] = ((i1 - 1, 0), ((node, Lambda),))
 
-        for (j1, nj) in enumerate(range(l2[j], j + 1), start=1):
+        for j1, nj in enumerate(range(l2[j], j + 1), start=1):
             node = postorder2[nj]
             forest_dist[0][j1] = forest_dist[0][j1 - 1] + insert(node)
-            opt_parts[0][j1] = [*opt_parts[0][j1 - 1], (Lambda, node)]
+            opt_parts[0][j1] = ((0, j1 - 1), ((Lambda, node),))
 
-        for (i1, ni) in enumerate(range(l1[i], i + 1), start=1):
-            for (j1, nj) in enumerate(range(l2[j], j + 1), start=1):
+        for i1, ni in enumerate(range(l1[i], i + 1), start=1):
+            for j1, nj in enumerate(range(l2[j], j + 1), start=1):
                 left = postorder1[ni]
                 right = postorder2[nj]
                 if l1[ni] == l1[i] and l2[nj] == l2[j]:
@@ -189,14 +182,14 @@ def tree_edit[T](
                     memo[ni][nj] = forest_dist[i1][j1]
                     if min_cost == 0:
                         change = (left, Lambda)
-                        opt_parts[i1][j1] = [*opt_parts[i1 - 1][j1], change]
+                        opt_parts[i1][j1] = ((i1 - 1, j1), (change,))
                     elif min_cost == 1:
                         change = (Lambda, right)
-                        opt_parts[i1][j1] = [*opt_parts[i1][j1 - 1], change]
+                        opt_parts[i1][j1] = ((i1, j1 - 1), (change,))
                     else:
                         change = (left, right)
-                        opt_parts[i1][j1] = [*opt_parts[i1 - 1][j1 - 1], change]
-                    ops[ni][nj] = opt_parts[i1][j1]
+                        opt_parts[i1][j1] = ((i1 - 1, j1 - 1), (change,))
+                    ops[ni][nj] = change_path(opt_parts, i1, j1)
                 else:
                     m = l1[ni] - l1[i]
                     n = l2[nj] - l2[j]
@@ -207,15 +200,32 @@ def tree_edit[T](
                     )), key=lambda e: e[1])
                     if min_cost == 0:
                         change = (left, Lambda)
-                        opt_parts[i1][j1] = [*opt_parts[i1 - 1][j1], change]
+                        opt_parts[i1][j1] = ((i1 - 1, j1), (change,))
                     elif min_cost == 1:
                         change = (Lambda, right)
-                        opt_parts[i1][j1] = [*opt_parts[i1][j1 - 1], change]
+                        opt_parts[i1][j1] = ((i1, j1 - 1), (change,))
                     else:
-                        opt_parts[i1][j1] = [*opt_parts[m][n], *ops[ni][nj]]
+                        next_op, changes = opt_parts[m][n]
+                        opt_parts[i1][j1] = (next_op, changes + ops[ni][nj])
 
-    for ki in keyroots1:
-        for kj in keyroots2:
+    for ki in tree.keyroots(tree1):
+        for kj in tree.keyroots(tree2):
             _tree_dist(ki, kj)
 
     return memo[-1][-1], tuple(ops[-1][-1])
+
+
+def change_path(ops, i, j) -> tuple[Change, ...]:
+    next_op, change = ops[i][j]
+    result = [*change[::-1]]
+    stack = [next_op]
+    while stack:
+        (i, j) = stack.pop()
+        current = ops[i][j]
+        if i < 0 or j < 0 or current == ():
+            continue
+        next_op, change = current
+        if change is not None:
+            result.extend(change[::-1])
+        stack.append(next_op)
+    return tuple(reversed(result))
