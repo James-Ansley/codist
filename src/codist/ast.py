@@ -145,25 +145,17 @@ def basic_name(node: AST, name_map) -> Tree[str]:
 
 def basic_collection(node: AST, name_map) -> Tree[str]:
     match node:
-        case List(elts=[]) | Call(func=Name("list"), args=[]):
+        case List([]) | Call(Name("list"), []):
             return t("List")
-        case List(elts):
-            return t("List", *(basic_ast(e, name_map) for e in elts))
-        case Tuple(elts=[]) | Call(func=Name("tuple"), args=[]):
+        case Tuple([]) | Call(Name("tuple"), []):
             return t("Tuple")
-        case Tuple(elts):
-            return t("Tuple", *(basic_ast(e, name_map) for e in elts))
-        case Set(elts=[]) | Call(func=Name("set"), args=[]):
+        case Set([]) | Call(Name("set"), []):
             return t("Set")
-        case Set(elts):
-            return t("Set", *(basic_ast(e, name_map) for e in elts))
-        case Dict(keys=[], values=[]) | Call(func=Name("dict"), args=[]):
+        case Dict([], []) | Call(Name("dict"), []):
             return t("Dict")
-        case Dict(keys, values):
-            return t(
-                "Dict",
-                *(basic_ast(e, name_map) for e in keys),
-                *(basic_ast(e, name_map) for e in values),
-            )
         case _:
-            raise ValueError("Unrecognized AST collection:", node)
+            return t(
+                type(node).__name__,
+                *(basic_ast(n, name_map) for n in iter_child_nodes(node)),
+            )
+
