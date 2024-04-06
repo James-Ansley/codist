@@ -17,11 +17,11 @@ type Tree[T: Hashable] = tuple[T, tuple[Tree[T], ...]]
 
 
 def t[T](
-      value: T,
+      root: T,
       *children: Tree[T],
 ) -> Tree[T]:
     """Small convenience function to help construct trees"""
-    return value, children
+    return root, children
 
 
 def postorder[T](tree: Tree[T]) -> tuple[T, ...]:
