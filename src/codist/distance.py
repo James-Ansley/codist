@@ -80,6 +80,10 @@ def tree_dist[T](
     l1 = tree.leftmosts(tree1)
     l2 = tree.leftmosts(tree2)
 
+    delete = cost.delete
+    insert = cost.insert
+    relabel = cost.relabel
+
     memo = [[0 for _ in postorder2] for _ in postorder1]
 
     def _tree_dist(i, j):
@@ -88,30 +92,29 @@ def tree_dist[T](
             for _ in range(i - l1[i] + 2)
         ]
 
-        for (i1, ni) in enumerate(range(l1[i], i + 1), start=1):
-            forest_dist[i1][0] = \
-                forest_dist[i1 - 1][0] + cost.delete(postorder1[ni])
+        for i1, ni in enumerate(range(l1[i], i + 1), start=1):
+            forest_dist[i1][0] = forest_dist[i1 - 1][0] + delete(postorder1[ni])
 
-        for (j1, nj) in enumerate(range(l2[j], j + 1), start=1):
-            forest_dist[0][j1] = \
-                forest_dist[0][j1 - 1] + cost.insert(postorder2[nj])
+        for j1, nj in enumerate(range(l2[j], j + 1), start=1):
+            forest_dist[0][j1] = forest_dist[0][j1 - 1] + insert(postorder2[nj])
 
-        for (i1, ni) in enumerate(range(l1[i], i + 1), start=1):
+        for i1, ni in enumerate(range(l1[i], i + 1), start=1):
             for (j1, nj) in enumerate(range(l2[j], j + 1), start=1):
+                node_i = postorder1[ni]
+                node_j = postorder2[nj]
                 if l1[ni] == l1[i] and l2[nj] == l2[j]:
-                    forest_dist[i1][j1] = min(
-                        forest_dist[i1 - 1][j1] + cost.delete(postorder1[ni]),
-                        forest_dist[i1][j1 - 1] + cost.insert(postorder2[nj]),
-                        forest_dist[i1 - 1][j1 - 1]
-                        + cost.relabel(postorder1[ni], postorder2[nj]),
+                    memo[ni][nj] = forest_dist[i1][j1] = min(
+                        forest_dist[i1 - 1][j1] + delete(node_i),
+                        forest_dist[i1][j1 - 1] + insert(node_j),
+                        forest_dist[i1 - 1][j1 - 1] + relabel(node_i, node_j),
                     )
-                    memo[ni][nj] = forest_dist[i1][j1]
                 else:
+                    m = l1[ni] - l1[i]
+                    n = l2[nj] - l2[j]
                     forest_dist[i1][j1] = min(
-                        forest_dist[i1 - 1][j1] + cost.delete(postorder1[ni]),
-                        forest_dist[i1][j1 - 1] + cost.insert(postorder2[nj]),
-                        forest_dist[l1[ni] - l1[i]][l2[nj] - l2[j]]
-                        + memo[ni][nj]
+                        forest_dist[i1 - 1][j1] + delete(node_i),
+                        forest_dist[i1][j1 - 1] + insert(node_j),
+                        forest_dist[m][n] + memo[ni][nj]
                     )
 
     for ki in keyroots1:
@@ -145,7 +148,14 @@ def tree_edit[T](
     l1 = tree.leftmosts(tree1)
     l2 = tree.leftmosts(tree2)
 
+    delete = cost.delete
+    insert = cost.insert
+    relabel = cost.relabel
+
     memo = [[0 for _ in postorder2] for _ in postorder1]
+    # TODO — maybe change opts and opt_parts to store tuples of the form
+    #  ((i, j), Change) where (i, j) refers to the previous operation index
+    #  this might significantly reduce overhead
     ops = [[[] for _ in postorder2] for _ in postorder1]
 
     def _tree_dist(i, j):
@@ -158,14 +168,12 @@ def tree_edit[T](
 
         for (i1, ni) in enumerate(range(l1[i], i + 1), start=1):
             node = postorder1[ni]
-            forest_dist[i1][0] = \
-                forest_dist[i1 - 1][0] + cost.delete(node)
+            forest_dist[i1][0] = forest_dist[i1 - 1][0] + delete(node)
             opt_parts[i1][0] = [*opt_parts[i1 - 1][0], (node, Lambda)]
 
         for (j1, nj) in enumerate(range(l2[j], j + 1), start=1):
             node = postorder2[nj]
-            forest_dist[0][j1] = \
-                forest_dist[0][j1 - 1] + cost.insert(node)
+            forest_dist[0][j1] = forest_dist[0][j1 - 1] + insert(node)
             opt_parts[0][j1] = [*opt_parts[0][j1 - 1], (Lambda, node)]
 
         for (i1, ni) in enumerate(range(l1[i], i + 1), start=1):
@@ -173,44 +181,38 @@ def tree_edit[T](
                 left = postorder1[ni]
                 right = postorder2[nj]
                 if l1[ni] == l1[i] and l2[nj] == l2[j]:
-                    costs = [
-                        forest_dist[i1 - 1][j1] + cost.delete(left),
-                        forest_dist[i1][j1 - 1] + cost.insert(right),
-                        forest_dist[i1 - 1][j1 - 1]
-                        + cost.relabel(left, right),
-                    ]
-                    forest_dist[i1][j1] = min(costs)
+                    min_cost, forest_dist[i1][j1] = min(enumerate((
+                        forest_dist[i1 - 1][j1] + delete(left),
+                        forest_dist[i1][j1 - 1] + insert(right),
+                        forest_dist[i1 - 1][j1 - 1] + relabel(left, right),
+                    )), key=lambda e: e[1])
                     memo[ni][nj] = forest_dist[i1][j1]
-                    min_cost = min((0, 1, 2), key=lambda i_: costs[i_])
                     if min_cost == 0:
-                        opt_parts[i1][j1] = \
-                            [*opt_parts[i1 - 1][j1], (left, Lambda)]
+                        change = (left, Lambda)
+                        opt_parts[i1][j1] = [*opt_parts[i1 - 1][j1], change]
                     elif min_cost == 1:
-                        opt_parts[i1][j1] = \
-                            [*opt_parts[i1][j1 - 1], (Lambda, right)]
+                        change = (Lambda, right)
+                        opt_parts[i1][j1] = [*opt_parts[i1][j1 - 1], change]
                     else:
-                        opt_parts[i1][j1] = \
-                            [*opt_parts[i1 - 1][j1 - 1], (left, right)]
+                        change = (left, right)
+                        opt_parts[i1][j1] = [*opt_parts[i1 - 1][j1 - 1], change]
                     ops[ni][nj] = opt_parts[i1][j1]
                 else:
                     m = l1[ni] - l1[i]
                     n = l2[nj] - l2[j]
-                    costs = [
-                        forest_dist[i1 - 1][j1] + cost.delete(left),
-                        forest_dist[i1][j1 - 1] + cost.insert(right),
+                    min_cost, forest_dist[i1][j1] = min(enumerate((
+                        forest_dist[i1 - 1][j1] + delete(left),
+                        forest_dist[i1][j1 - 1] + insert(right),
                         forest_dist[m][n] + memo[ni][nj],
-                    ]
-                    forest_dist[i1][j1] = min(costs)
-                    min_cost = min((0, 1, 2), key=lambda i_: costs[i_])
+                    )), key=lambda e: e[1])
                     if min_cost == 0:
-                        opt_parts[i1][j1] = \
-                            [*opt_parts[i1 - 1][j1], (left, Lambda)]
+                        change = (left, Lambda)
+                        opt_parts[i1][j1] = [*opt_parts[i1 - 1][j1], change]
                     elif min_cost == 1:
-                        opt_parts[i1][j1] = \
-                            [*opt_parts[i1][j1 - 1], (Lambda, right)]
+                        change = (Lambda, right)
+                        opt_parts[i1][j1] = [*opt_parts[i1][j1 - 1], change]
                     else:
-                        opt_parts[i1][j1] = \
-                            [*opt_parts[m][n], *ops[ni][nj]]
+                        opt_parts[i1][j1] = [*opt_parts[m][n], *ops[ni][nj]]
 
     for ki in keyroots1:
         for kj in keyroots2:
