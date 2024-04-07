@@ -51,6 +51,18 @@ def nodes_of_type[T](
         yield from nodes_of_type(c, n_type)
 
 
+def yield_names(node) -> Iterator[str]:
+    match node:
+        case (ClassDef(name)
+              | FunctionDef(name)
+              | arg(name)
+              | Name(name)
+              | Attribute(name)):
+            yield name
+    for child in iter_child_nodes(node):
+        yield from yield_names(child)
+
+
 def parse_basic_ast(code: str) -> Tree[str]:
     module = parse(code)
     # TODO — reorder function and class definitions by alphabetical
@@ -158,4 +170,3 @@ def basic_collection(node: AST, name_map) -> Tree[str]:
                 type(node).__name__,
                 *(basic_ast(n, name_map) for n in iter_child_nodes(node)),
             )
-
