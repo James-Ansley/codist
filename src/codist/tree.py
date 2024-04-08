@@ -4,9 +4,20 @@ Tree utilities and type definitions.
 
 from collections.abc import Hashable
 
-__all__ = ("Tree", "t", "postorder", "keyroots", "leftmosts")
+__all__ = (
+    "Tree",
+    "t",
+    "postorder",
+    "keyroots",
+    "leftmosts",
+    "parents",
+    "Lambda",
+)
 
-from typing import TypeVar
+from typing import Final, TypeVar
+
+#: A singleton used in change operations
+Lambda: Final[str] = "Λ"
 
 T = TypeVar("T", bound=Hashable)
 #: A tree type.
@@ -72,4 +83,21 @@ def leftmosts[T](tree: Tree[T]) -> tuple[int, ...]:
         else:
             memo[id(node)] = i
             indices.append(i)
+    return tuple(indices)
+
+
+def parents[T](tree: Tree[T]) -> "tuple[int | Lambda, ...]":
+    """
+    The postorder enumeration of the indices of the parent of each node,
+    The root of the tree has the parent Lambda (i.e. indicating no parent)
+    """
+    s1 = [(tree, Lambda)]
+    s2 = []
+    while s1:
+        current, parent = s1.pop()
+        s2.append((current, parent))
+        s1.extend((child, current) for child in current[1])
+    memo = {id(t): i for i, (t, _) in enumerate(reversed(s2))}
+    memo |= {id(Lambda): Lambda}
+    indices = (memo[id(t)] for (_, t) in reversed(s2))
     return tuple(indices)

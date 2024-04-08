@@ -1,4 +1,4 @@
-from codist.tree import keyroots, leftmosts, postorder, t
+from codist.tree import Lambda, keyroots, leftmosts, parents, postorder, t
 
 tree1 = t("f", t("d", t("a"), t("c", t("b"))), t("e"))
 tree2 = t("f", t("c", t("d", t("a"), t("b"))), t("e"))
@@ -34,3 +34,11 @@ def test_leftmost():
     assert leftmosts(tree2) == (0, 1, 0, 0, 4, 0)
     assert leftmosts(tree3) == (0, 1, 1, 3, 0, 5, 0)
     assert leftmosts(tree4) == (0, 1, 1, 3, 4, 3, 0, 7, 7, 9, 10, 11, 11, 7, 0)
+
+
+def test_parents():
+    assert parents(tree1) == (3, 2, 3, 5, 5, Lambda)
+    assert parents(tree2) == (2, 2, 3, 5, 5, Lambda)
+    assert parents(tree3) == (4, 2, 4, 4, 6, 6, Lambda)
+    assert parents(tree4) == (6, 2, 6, 5, 5, 6, 14, 8, 13,
+                              13, 13, 12, 13, 14, Lambda)

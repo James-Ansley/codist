@@ -6,24 +6,36 @@ from collections.abc import Callable
 from typing import Final, TypeVar
 
 from . import tree
-from .tree import Tree
+from .tree import Lambda, Tree
 
 __all__ = (
     "Cost",
     "tree_dist",
     "tree_edit",
-    "Lambda",
     "Change",
 )
 
-#: A singleton used in change operations
-Lambda: Final[str] = "Λ"
+
 
 T = TypeVar("T")
-#: A change operation of the form ``(T | Lambda -> T | Lambda)``
-Change: type[tuple[T | Lambda, T | Lambda]]
+#: A change operation of the form ``(T | Lambda -> T | Lambda, ctx)``
+#: Where ``ctx`` is either an index or Lambda providing some context for
+#: the change operation.
+#:
+#: - For insertions (Λ -> T, ctx), the ctx is the postorder index of the parent
+#:   node in tree2 that T is being added under
+#: - For deletions (T -> Λ, ctx), the ctx is the postorder index of the node in
+#:   tree1 that is deleted
+#: - For relabelings (T1 -> T2, ctx), the ctx is the postorder index of the
+#:   node in tree1 that is relabeled
+#:
+#: .. note::
+#:     The ctx variable provides some context for change operations, but does
+#:     not provide, for example, the indices of the siblings that are inserted
+#:     as children of T for an insertion operation.
+Change: type[tuple[T | Lambda, T | Lambda, "int | Lambda"]]
 
-type Change[T] = tuple[T | Lambda, T | Lambda]
+type Change[T] = tuple[T | Lambda, T | Lambda, int | Lambda]
 
 
 class Cost[T]:
@@ -136,13 +148,15 @@ def tree_edit[T](
 
     :returns: A tuple containing the edit distance between
         ``tree1`` and ``tree2`` and a tuple of `Change` operations where each
-        change operation is a 2-tuple of the form ``(T | Lambda -> T | Lambda)``
+        change operation is a 3-tuple of the form
+        ``(T | Lambda -> T | Lambda, ctx)``
         where ``Lambda`` is a singleton string: ``"Λ"``
     """
     postorder1 = tree.postorder(tree1)
     postorder2 = tree.postorder(tree2)
     l1 = tree.leftmosts(tree1)
     l2 = tree.leftmosts(tree2)
+    p2 = tree.parents(tree2)
 
     delete = cost.delete
     insert = cost.insert
@@ -162,12 +176,12 @@ def tree_edit[T](
         for i1, ni in enumerate(range(l1[i], i + 1), start=1):
             node = postorder1[ni]
             forest_dist[i1][0] = forest_dist[i1 - 1][0] + delete(node)
-            opt_parts[i1][0] = ((i1 - 1, 0), ((node, Lambda),))
+            opt_parts[i1][0] = ((i1 - 1, 0), ((node, Lambda, ni),))
 
         for j1, nj in enumerate(range(l2[j], j + 1), start=1):
             node = postorder2[nj]
             forest_dist[0][j1] = forest_dist[0][j1 - 1] + insert(node)
-            opt_parts[0][j1] = ((0, j1 - 1), ((Lambda, node),))
+            opt_parts[0][j1] = ((0, j1 - 1), ((Lambda, node, p2[nj]),))
 
         for i1, ni in enumerate(range(l1[i], i + 1), start=1):
             for j1, nj in enumerate(range(l2[j], j + 1), start=1):
@@ -181,15 +195,15 @@ def tree_edit[T](
                     )), key=lambda e: e[1])
                     memo[ni][nj] = forest_dist[i1][j1]
                     if min_cost == 0:
-                        change = (left, Lambda)
+                        change = (left, Lambda, ni)
                         opt_parts[i1][j1] = ((i1 - 1, j1), (change,))
                     elif min_cost == 1:
-                        change = (Lambda, right)
+                        change = (Lambda, right, p2[nj])
                         opt_parts[i1][j1] = ((i1, j1 - 1), (change,))
                     else:
-                        change = (left, right)
+                        change = (left, right, ni)
                         opt_parts[i1][j1] = ((i1 - 1, j1 - 1), (change,))
-                    ops[ni][nj] = change_path(opt_parts, i1, j1)
+                    ops[ni][nj] = _change_path(opt_parts, i1, j1)
                 else:
                     m = l1[ni] - l1[i]
                     n = l2[nj] - l2[j]
@@ -199,10 +213,10 @@ def tree_edit[T](
                         forest_dist[m][n] + memo[ni][nj],
                     )), key=lambda e: e[1])
                     if min_cost == 0:
-                        change = (left, Lambda)
+                        change = (left, Lambda, ni)
                         opt_parts[i1][j1] = ((i1 - 1, j1), (change,))
                     elif min_cost == 1:
-                        change = (Lambda, right)
+                        change = (Lambda, right, p2[nj])
                         opt_parts[i1][j1] = ((i1, j1 - 1), (change,))
                     else:
                         next_op, changes = opt_parts[m][n]
@@ -215,7 +229,7 @@ def tree_edit[T](
     return memo[-1][-1], tuple(ops[-1][-1])
 
 
-def change_path(ops, i, j) -> tuple[Change, ...]:
+def _change_path(ops, i, j) -> tuple[Change, ...]:
     next_op, change = ops[i][j]
     result = [*change[::-1]]
     stack = [next_op]

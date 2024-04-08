@@ -99,8 +99,8 @@ def test_tree_edit_path_will_return_operations_to_transform_one_tree_into_anothe
     cost, path = tree_edit(tree5, tree6, cost)
     assert cost == 15
     assert set(path) == {
-        ("d", Lambda), ("b", Lambda), ("a", Lambda), ("c", Lambda),
-        (Lambda, "x"), ('e', 'e'), ('f', 'f'), ('g', 'g'),
+        ("d", Lambda, 6), ("b", Lambda, 2), ("a", Lambda, 0), ("c", Lambda, 1),
+        (Lambda, "x", 1), ('e', 'e', 3), ('f', 'f', 5), ('g', 'g', 4),
     }
     cost = Cost(
         delete=(lambda _: 3),
@@ -111,6 +111,6 @@ def test_tree_edit_path_will_return_operations_to_transform_one_tree_into_anothe
     cost, path = tree_edit(tree5, tree6, cost)
     assert cost == 17
     assert set(path) == {
-        ("c", Lambda), ("f", Lambda), ("g", Lambda),
-        ("e", "g"), ("d", "f"), ("b", "e"), ("a", "x")
+        ("c", Lambda, 1), ("f", Lambda, 5), ("g", Lambda, 4),
+        ("e", "g", 3), ("d", "f", 6), ("b", "e", 2), ("a", "x", 0)
     }

@@ -9,6 +9,7 @@
 
    .. autosummary::
    
+      Lambda
       Tree
    
    
@@ -21,6 +22,7 @@
    
       keyroots
       leftmosts
+      parents
       postorder
       t
    

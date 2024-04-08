@@ -78,11 +78,31 @@ from codist import tree_edit
 dist, path = tree_edit(tree1, tree2)
 path = tuple(c for c in path if c[0] != c[1])
 print("The distance is:", dist)  # The distance is 2
-print("The changes are:", path)  # The changes are: (('c', 'Λ'), ('Λ', 'c'))
+
+# The changes are: (('c', 'Λ', 2), ('Λ', 'c', 5))
+print("The changes are:", path)
 ```
 
-Change operations are 2-tuples of the form: `tuple[T | Lambda, T | Lambda]`
-where `Lambda` is a singleton defined in the `distance` module.
+Change operations are 3-tuples of the form:
+`tuple[T | Lambda, T | Lambda, int | Lambda]`
+where `Lambda` is a singleton defined in the `tree` module.
+
+The third element of the tuple is a postorder index that provides context for
+the change operation.
+For insertion operations, the context index is the index of the parent node in
+Tree2 under which the node T is being inserted. For deletion and relabel
+operations, the context is the index of the node in Tree1 that is being deleted
+or relabelled.
+
+In the above example, `('c', 'Λ', 2)` indicates a deletion change operation,
+where the node at index 2 of tree1, `"c"` is being deleted. `('Λ', 'c', 5)`
+indicates a new node labelled `"c"` is being inserted under the node at index
+5 of tree2, `"f"`.
+
+The context index does not contain all information about the changes, for
+example, for insertion changes, the context index provides no information about
+which siblings of the parent node are pulled down as children of the inserted
+node.
 
 The `tree_edit` function can also take a cost object.
 
