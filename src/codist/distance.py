@@ -85,6 +85,8 @@ def tree_dist[T](
 
     :returns: The edit distance between ``tree1`` and ``tree2``
     """
+    keyroots1 = tree.keyroots(tree1)
+    keyroots2 = tree.keyroots(tree2)
     postorder1 = tree.postorder(tree1)
     postorder2 = tree.postorder(tree2)
     l1 = tree.leftmosts(tree1)
@@ -127,8 +129,8 @@ def tree_dist[T](
                         forest_dist[m][n] + memo[ni][nj]
                     )
 
-    for ki in tree.keyroots(tree1):
-        for kj in tree.keyroots(tree2):
+    for ki in keyroots1:
+        for kj in keyroots2:
             _tree_dist(ki, kj)
 
     return memo[-1][-1]
@@ -152,6 +154,8 @@ def tree_edit[T](
         ``(T | Lambda -> T | Lambda, ctx)``
         where ``Lambda`` is a singleton string: ``"Λ"``
     """
+    keyroots1 = tree.keyroots(tree1)
+    keyroots2 = tree.keyroots(tree2)
     postorder1 = tree.postorder(tree1)
     postorder2 = tree.postorder(tree2)
     l1 = tree.leftmosts(tree1)
@@ -222,8 +226,8 @@ def tree_edit[T](
                         next_op, changes = opt_parts[m][n]
                         opt_parts[i1][j1] = (next_op, changes + ops[ni][nj])
 
-    for ki in tree.keyroots(tree1):
-        for kj in tree.keyroots(tree2):
+    for ki in keyroots1:
+        for kj in keyroots2:
             _tree_dist(ki, kj)
 
     return memo[-1][-1], tuple(ops[-1][-1])
